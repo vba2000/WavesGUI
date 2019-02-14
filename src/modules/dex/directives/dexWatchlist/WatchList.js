@@ -531,10 +531,12 @@
              * @private
              */
             _getPairList() {
+                const favorite = (this._favourite || []).map(p => p.sort());
                 const chosen = [this._assetIdPair.amount, this._assetIdPair.price].sort();
-                const idList = R.uniq(this._assetsIds);
+                const searchIdList = Object.keys(this._searchAssetsHash);
+                const idList = R.uniq(this._assetsIds.concat(searchIdList));
                 const other = WatchList._getAllCombinations(idList);
-                return R.uniq(other.concat([chosen]));
+                return R.uniq(favorite.concat(other, [chosen]));
             }
 
             /**
