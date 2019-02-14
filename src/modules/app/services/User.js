@@ -458,6 +458,7 @@
                 this.setSetting('theme', newTheme);
             }
 
+
             /**
              * @return {Promise<any>}
              */
