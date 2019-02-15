@@ -141,8 +141,10 @@
     function _getStorageApi() {
         const { WindowAdapter, Bus } = require('@waves/waves-browser-bus');
 
+        const opener = window.opener || window;
+        const origin = opener.location.origin;
         const adapter = new WindowAdapter(
-            { win: window.opener || window, origin: location.origin },
+            { win: opener, origin },
             { win: window, origin: location.origin }
         );
 
