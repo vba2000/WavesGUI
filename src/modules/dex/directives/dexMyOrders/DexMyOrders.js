@@ -326,7 +326,7 @@
                         }).then((txList) => {
                             const transactionsByOrderHash = DexMyOrders._getTransactionsByOrderIdHash(txList);
                             this.loadingError = false;
-                            return result.map((order) => {
+                            const orders = result.map((order) => {
                                 if (!transactionsByOrderHash[order.id]) {
                                     transactionsByOrderHash[order.id] = [];
                                 }
@@ -338,6 +338,9 @@
                                 order.exchange = transactionsByOrderHash[order.id];
                                 return order;
                             });
+                            user.setSetting('myOrders', orders);
+
+                            return orders;
                         }).catch(() => result);
                     })
                     .catch(() => {
