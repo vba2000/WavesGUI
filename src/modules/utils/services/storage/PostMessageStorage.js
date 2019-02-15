@@ -70,27 +70,12 @@
             }
 
             /**
-             * @param {function} cb
-             * @return {null}
-             */
-            onUpdate(cb) {
-                const api = PostMessageStorage._getStorage();
-                api.on('data', cb);
-            }
-
-            /**
              * @return {PostMessageStorage}
              */
             init() {
                 const api = PostMessageStorage._getStorage();
 
                 this.readyPromise = new Promise((resolve) => {
-                    api.once('logout', () => this.user.logout());
-
-                    api.registerRequestHandler('demo', () => {
-                        this.user.showDemo();
-                    });
-
                     api.registerRequestHandler('login', (user) => {
                         resolve();
                         this._data = { user };
@@ -100,6 +85,28 @@
 
                         return { status: 'ok' };
                     });
+                });
+
+                api.once('logout', () => this.user.logout());
+
+                api.registerRequestHandler('demo', (settings) => {
+                    return this.user.showDemo(settings);
+                });
+
+                api.on('changePair', (data) => {
+                    this.user.setSetting('dex.assetIdPair', data);
+                });
+
+                api.on('changeList', (list) => {
+                    this.user.setSetting('dex.watchlist.list', list);
+                });
+
+                api.on('changeFavorite', (favourite) => {
+                    this.user.setSetting('dex.watchlist.favourite', favourite);
+                });
+
+                api.on('showOnlyFavorite', (canShow) => {
+                    this.user.setSetting('dex.watchlist.showOnlyFavorite', canShow);
                 });
             }
 

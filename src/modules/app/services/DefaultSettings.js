@@ -90,10 +90,9 @@
                         watchlist: {
                             showOnlyFavorite: false,
                             favourite: [
-                                [WavesApp.defaultAssets.WAVES, WavesApp.defaultAssets.BTC]
                             ],
                             activeTab: 'all',
-                            list: Object.values(WavesApp.defaultAssets)
+                            list: []
                         },
                         layout: {
                             watchlist: {

@@ -311,7 +311,10 @@
                 }
             }
 
-            showDemo() {
+            showDemo(settings) {
+                this.settings = settings;
+                this._settings = defaultSettings.create(this.settings);
+                this._settings.change.on(() => this._onChangeSettings());
                 $state.go('main.dex-demo');
             }
 

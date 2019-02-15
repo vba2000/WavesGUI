@@ -15,12 +15,13 @@
             userType: 'wavesKeeper',
             settings: {
                 dex: {
+                    showOnlyFavorite: false,
                     assetIdPair: { amount: 'WAVES', price: '2xfiUGhV1pBafY4re5ddzaG5EnSthBhJoWMGKDpcUjAQ' },
                     watchlist: {
+                        favourite: [],
                         list: [
                             'WAVES',
-                            '2xfiUGhV1pBafY4re5ddzaG5EnSthBhJoWMGKDpcUjAQ',
-                            '9N6Gfy8QQQduVh8wHr8KHp7XrBAdgzQcQ2VstFJaBrp'
+                            '2xfiUGhV1pBafY4re5ddzaG5EnSthBhJoWMGKDpcUjAQ'
                         ]
                     }
                 }
@@ -50,6 +51,40 @@
         localStorage.setItem('data', JSON.stringify(state));
         return state;
     });
+
+    window.changePair = () => {
+        api.dispatchEvent('changePair',
+            { amount: '9N6Gfy8QQQduVh8wHr8KHp7XrBAdgzQcQ2VstFJaBrp', price: 'WAVES' }
+        );
+    };
+
+    window.setAssetsList = () => {
+        api.dispatchEvent('changeList',
+            [
+                'WAVES',
+                '9N6Gfy8QQQduVh8wHr8KHp7XrBAdgzQcQ2VstFJaBrp',
+                '8LQW8f7P5d5PZM7GtZEBgaqRPGSzS3DfPuiXrURJ4AJS'
+            ]
+        );
+    };
+
+    window.setFavouriteList = () => {
+        api.dispatchEvent('changeFavorite',
+            [
+                ['9N6Gfy8QQQduVh8wHr8KHp7XrBAdgzQcQ2VstFJaBrp', 'WAVES']
+            ]
+        );
+    };
+
+    let favourite = false;
+
+    window.toggleFavourite = () => {
+        favourite = !favourite;
+        api.dispatchEvent('showOnlyFavorite', favourite
+        );
+    };
+
+    window.showDemo = () => api.request('demo', state.user.settings);
 
     connect(state.user);
 })();

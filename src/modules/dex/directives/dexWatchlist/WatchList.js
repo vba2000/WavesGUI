@@ -200,6 +200,10 @@
                 this._initializeActiveTab();
 
                 this.observe('_assetIdPair', this._onChangeChosenPair);
+                this.observe('_assetsIds', () => {
+                    this._getPairData();
+                    WatchList._renderSmartTable();
+                });
                 this.observe('activeTab', this._onChangeActiveTab);
 
                 stService.draw.once(WatchList._onRenderTable);
