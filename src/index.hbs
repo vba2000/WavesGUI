@@ -348,6 +348,7 @@
                 LTC: '{{network.assets.LTC}}',
                 ZEC: '{{network.assets.ZEC}}',
                 BCH: '{{network.assets.BCH}}',
+                BSV: '{{network.assets.BSV}}',
                 DASH: '{{network.assets.DASH}}',
                 TRY: '{{network.assets.TRY}}',
                 XMR: '{{network.assets.XMR}}'
@@ -368,9 +369,8 @@
                 '{{network.assets.ETH}}': 'Ethereum'
             },
             matcherSignInterval: { count: 20, timeType: 'day' },
-            scam: Object.create(null),
             dex: {
-                resolutions: ['15', '30', '60', '240', '1440'], // TODO : add months
+                resolutions: ['5', '15', '30', '60', '120', '180', '240', '360', '720', '1440'], // TODO : add months
                 defaultResolution: '60'
             },
             modules: [],
@@ -504,6 +504,10 @@
 </head>
 
 <body>
+
+<div class="notifications notifications-top">
+    <w-container-alert-notification type="userNotification"></w-container-alert-notification>
+</div>
 
 <div class="app-loader">
     <div class="progress"></div>
