@@ -1,38 +1,44 @@
 (function () {
     'use strict';
 
-    const { WindowAdapter, Bus } = require('@waves/waves-browser-bus');
-    const adapter = new WindowAdapter(
-        { win: window.opener || window, origin: location.origin },
-        { win: window, origin: '*' }
-    );
+    const { WindowAdapter, Bus, WindowProtocol } = require('@waves/waves-browser-bus');
+    const opener = window.opener || window;
+    const origin = opener.location.origin;
+    const listen = new WindowProtocol(window, 'listen');
+    const dispatch = new WindowProtocol(opener, 'dispatch');
+    const adapter = new WindowAdapter([listen], [dispatch], { origins: origin });
 
     const api = new Bus(adapter);
-    const state = JSON.parse(localStorage.getItem('data')) || {
-        user: {
-            address: '3PCAB4sHXgvtu5NPoen6EXR5yaNbvsEA8Fj',
-            publicKey: '2M25DqL2W4rGFLCFadgATboS8EPqyWAN3DjH12AH5Kdr',
-            userType: 'wavesKeeper',
-            settings: {
-                dex: {
-                    showOnlyFavorite: false,
-                    assetIdPair: { amount: 'WAVES', price: '2xfiUGhV1pBafY4re5ddzaG5EnSthBhJoWMGKDpcUjAQ' },
-                    watchlist: {
-                        favourite: [],
-                        list: [
-                            'WAVES',
-                            '2xfiUGhV1pBafY4re5ddzaG5EnSthBhJoWMGKDpcUjAQ'
-                        ]
-                    }
+    const state = JSON.parse(localStorage.getItem('data'));
+    const defaultUser = {
+        address: '3PCAB4sHXgvtu5NPoen6EXR5yaNbvsEA8Fj',
+        publicKey: '2M25DqL2W4rGFLCFadgATboS8EPqyWAN3DjH12AH5Kdr',
+        userType: 'wavesKeeper',
+        settings: {
+            dex: {
+                showOnlyFavorite: false,
+                assetIdPair: { amount: 'WAVES', price: '2xfiUGhV1pBafY4re5ddzaG5EnSthBhJoWMGKDpcUjAQ' },
+                watchlist: {
+                    favourite: [],
+                    list: [
+                        'WAVES',
+                        '2xfiUGhV1pBafY4re5ddzaG5EnSthBhJoWMGKDpcUjAQ'
+                    ]
                 }
             }
         }
     };
 
     function connect(user) {
-        return api.request('login', user, 2000)
-            .catch(() => {
-                return new Promise((res) => setTimeout(() => res(connect(user)), 2000));
+        return api.request('login', user || defaultUser, 10000)
+            .then((...args) => {
+                /* eslint-disable*/
+                console.log(...args);
+            })
+            .catch((error) => {
+                /* eslint-disable*/
+                console.error(error);
+                return new Promise((res) => setTimeout(() => res(connect(user)), 20000));
             });
     }
 

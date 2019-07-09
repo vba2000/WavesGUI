@@ -46,6 +46,10 @@
              */
             disabled = false;
             /**
+             * @type {boolean}
+             */
+            oneItem = false;
+            /**
              * @type {string}
              */
             filter = '';
@@ -63,11 +67,15 @@
                  */
                 this._render = utils.debounce(() => {
                     this._initializeSelected();
-                    $scope.$digest();
+                    $scope.$apply();
                 }, 100);
 
                 this.observe('disabled', () => {
                     $element.toggleClass('disabled', !!this.disabled);
+                });
+
+                this.observe('oneItem', () => {
+                    $element.toggleClass('disabled one-item', !!this.oneItem);
                 });
 
                 this.observe('filter', () => {
@@ -246,7 +254,8 @@
             ngModel: '=',
             disabled: '<',
             upDirection: '<',
-            canSearch: '<'
+            canSearch: '<',
+            oneItem: '<'
         },
         templateUrl: 'modules/ui/directives/select/select.html',
         transclude: true,

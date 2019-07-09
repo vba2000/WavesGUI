@@ -9,19 +9,17 @@
         class PostMessageStorage {
 
             /**
+             * @type {Bus|null}
+             */
+            static storage = null;
+            /**
              * @type {User}
              */
             user;
-
             /**
              * @type {Promise<any>}
              */
             readyPromise;
-
-            /**
-             * @type {Bus|null}
-             */
-            static storage = null;
 
             /**
              * @return {Bus}
@@ -139,14 +137,12 @@
      * @private
      */
     function _getStorageApi() {
-        const { WindowAdapter, Bus } = require('@waves/waves-browser-bus');
-
+        const { WindowAdapter, Bus, WindowProtocol } = require('@waves/waves-browser-bus');
         const opener = window.opener || window;
         const origin = opener.location.origin;
-        const adapter = new WindowAdapter(
-            { win: opener, origin },
-            { win: window, origin: location.origin }
-        );
+        const listen = new WindowProtocol(window, 'listen');
+        const dispatch = new WindowProtocol(opener, 'dispatch');
+        const adapter = new WindowAdapter([listen], [dispatch], { origins: origin });
 
         return new Bus(adapter);
     }

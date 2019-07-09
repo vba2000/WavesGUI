@@ -6,11 +6,70 @@
     const { isEmpty, getPaths, get, Signal } = require('ts-utils');
     const tsApiValidator = require('ts-api-validator');
     const { WindowAdapter, Bus } = require('@waves/waves-browser-bus');
-    const { splitEvery, pipe, path, map } = require('ramda');
+    const { splitEvery, pipe, path, map, ifElse, concat, defaultTo, identity, isNil, propEq } = require('ramda');
     const { libs } = require('@waves/signature-generator');
     const ds = require('data-service');
     const { SIGN_TYPE } = require('@waves/signature-adapter');
     const { Money, BigNumber } = require('@waves/data-entities');
+    const { STATUS_LIST } = require('@waves/oracle-data');
+
+    const GOOD_COLORS_LIST = [
+        '#39a12c',
+        '#6a737b',
+        '#e49616',
+        '#008ca7',
+        '#ff5b38',
+        '#ff6a00',
+        '#c74124',
+        '#00a78e',
+        '#b01e53',
+        '#e0c61b',
+        '#5a81ea',
+        '#72b7d2',
+        '#a5b5c3',
+        '#81c926',
+        '#86a3bd',
+        '#c1d82f',
+        '#5c84a8',
+        '#267e1b',
+        '#fbb034',
+        '#ff846a',
+        '#47c1ff',
+        '#00a0af',
+        '#85d7c6',
+        '#8a7967',
+        '#26c1c9',
+        '#72d28b',
+        '#5B1909',
+        '#264764',
+        '#270774',
+        '#8763DE',
+        '#F04085',
+        '#1E6AFD',
+        '#FF1E43',
+        '#D3002D',
+        '#967400',
+        '#264163'
+    ];
+
+    const DEFAULT_ASSET_ICONS_MAP = Object.assign(Object.create(null), {
+        [WavesApp.defaultAssets.WAVES]: '/img/assets/waves.svg',
+        [WavesApp.defaultAssets.BTC]: '/img/assets/bitcoin.svg',
+        [WavesApp.defaultAssets.ETH]: '/img/assets/ethereum.svg',
+        [WavesApp.defaultAssets.LTC]: '/img/assets/ltc.svg',
+        [WavesApp.defaultAssets.ZEC]: '/img/assets/zec.svg',
+        [WavesApp.defaultAssets.EUR]: '/img/assets/euro.svg',
+        [WavesApp.defaultAssets.USD]: '/img/assets/usd.svg',
+        [WavesApp.defaultAssets.DASH]: '/img/assets/dash.svg',
+        [WavesApp.defaultAssets.BCH]: '/img/assets/bitcoin-cash.svg',
+        [WavesApp.defaultAssets.BSV]: '/img/assets/bitcoin-cash-sv.svg',
+        [WavesApp.defaultAssets.TRY]: '/img/assets/try.svg',
+        [WavesApp.defaultAssets.XMR]: '/img/assets/xmr.svg',
+        [WavesApp.defaultAssets.VST]: '/img/assets/vostok.svg',
+        [WavesApp.defaultAssets.ERGO]: '/img/assets/ergo.svg',
+        [WavesApp.otherAssetsWithIcons.EFYT]: '/img/assets/efyt.svg',
+        [WavesApp.otherAssetsWithIcons.WNET]: '/img/assets/wnet.svg'
+    });
 
     const nullOrCb = (name, cb) => (val1, val2) => {
         const v1 = val1[name];
@@ -142,6 +201,11 @@
      */
     const factory = function ($q, Moment, $injector) {
 
+        const base58ToBytes = libs.base58.decode;
+        const stringToBytes = libs.converters.stringToByteArray;
+        const bytesToBase58 = libs.base58.encode;
+        const bytesToString = libs.converters.byteArrayToString;
+
         const utils = {
 
             /**
@@ -150,7 +214,112 @@
             apiValidatorParts: {
                 BigNumberPart
             },
+            /**
+             * @name app.utils#getAssetLogo
+             * @param {string} assetId
+             * @return {string | undefined}
+             */
+            getAssetLogo(assetId) {
+                return DEFAULT_ASSET_ICONS_MAP[assetId];
+            },
+            /**
+             * @name app.utils#getAssetLogoBackground
+             * @param assetId
+             * @return {string}
+             */
+            getAssetLogoBackground(assetId) {
+                const sum = assetId.split('')
+                    .map(char => char.charCodeAt(0))
+                    .reduce((acc, code) => acc + code, 0);
+                return GOOD_COLORS_LIST[sum % GOOD_COLORS_LIST.length];
+            },
+            /**
+             * @name app.utils#base58ToBytes
+             * @function
+             * @param {string} data
+             * @return {Uint8Array}
+             */
+            base58ToBytes: pipe(
+                defaultTo(''),
+                base58ToBytes
+            ),
+            /**
+             * @name app.utils#base58ToString
+             * @function
+             * @param {string|number} data
+             * @return {string}
+             */
+            base58ToString: pipe(
+                defaultTo(''),
+                base58ToBytes,
+                bytesToString
+            ),
+            /**
+             * @name app.utils#stringToBytes
+             * @function
+             * @param {string|number} data
+             * @return {Uint8Array}
+             */
+            stringToBytes: pipe(
+                defaultTo(''),
+                stringToBytes
+            ),
+            /**
+             * @name app.utils#stringToBase58
+             * @function
+             * @param {string|number} data
+             * @return {string}
+             */
+            stringToBase58: pipe(
+                defaultTo(''),
+                String,
+                stringToBytes,
+                bytesToBase58
+            ),
+            /**
+             * @name app.utils#bytesToBase58
+             * @function
+             * @param {Uint8Array} data
+             * @return {string}
+             */
+            bytesToBase58: pipe(
+                defaultTo(new Uint8Array([])),
+                bytesToBase58
+            ),
+            /**
+             * @name app.utils#bytesToString
+             * @function(data: Uint8Array): string
+             */
+            bytesToString: pipe(
+                defaultTo(new Uint8Array([])),
+                bytesToString
+            ),
+            /**
+             * @name app.utils#bytesToSafeString
+             * @function(data: Uint8Array): string
+             */
+            bytesToSafeString: ifElse(
+                pipe(
+                    identity,
+                    bytesToString,
+                    isNil,
+                ),
+                pipe(
+                    identity,
+                    bytesToBase58,
+                    concat('base58:')
+                ),
+                pipe(
+                    identity,
+                    bytesToString
+                )
+            ),
 
+            /**
+             * @name app.utils#removeUrlProtocol
+             * @param {string} url
+             * @return {string}
+             */
             removeUrlProtocol(url) {
                 return url.replace(/.+?(:\/\/)/, '');
             },
@@ -216,16 +385,14 @@
                         case v instanceof Date:
                             return v.getTime();
                         default:
-                            return v;
+                            return encodeURIComponent(v);
                     }
                 };
                 const createKeyValue = (key, v) => `${key}=${customSerialize(v)}`;
                 const createArrayKeyValue = (key, values) => values.map(v => createKeyValue(`${key}[]`, v)).join('&');
                 const qs = Object.entries(obj)
                     .filter(([_, value]) => value !== undefined)
-                    .map(([key, value]) => {
-                        return Array.isArray(value) ? createArrayKeyValue(key, value) : createKeyValue(key, value);
-                    })
+                    .map(([key, value]) => Array.isArray(value) ? createArrayKeyValue(key, value) : createKeyValue(key, value))
                     .join('&');
                 return qs === '' ? qs : `?${qs}`;
                 /* eslint-enable */
@@ -497,6 +664,16 @@
             },
 
             /**
+             * @name app.utils#safeApply
+             * @param {$rootScope.Scope} $scope
+             */
+            postDigest($scope) {
+                return new Promise(resolve => {
+                    $scope.$parent.$$postDigest(resolve);
+                });
+            },
+
+            /**
              * @name app.utils#when
              * @param {*} [data]
              * @return {Promise}
@@ -692,7 +869,6 @@
                 return new Promise((resolve, reject) => {
                     target.addEventListener('load', resolve, false);
                     target.addEventListener('error', reject, false);
-
                     setTimeout(() => {
                         reject(new Error('Timeout limit error!'));
                     }, timeout);
@@ -708,20 +884,22 @@
              */
             importUsersByWindow(win, origin, timeout) {
                 return new Promise((resolve, reject) => {
-                    const adapter = new WindowAdapter(
-                        { win: window, origin: WavesApp.origin },
-                        { win, origin }
-                    );
-                    const bus = new Bus(adapter);
+                    WindowAdapter.createSimpleWindowAdapter(win, {
+                        origins: [origin]
+                    }).then(adapter => {
+                        const bus = new Bus(adapter);
 
-                    bus.once('export-ready', () => {
-                        bus.request('getLocalStorageData')
-                            .then(utils.onExportUsers(origin, resolve));
+                        bus.once('ready', () => {
+                            bus.request('getLocalStorageData', null, timeout)
+                                .then(utils.onExportUsers(origin, resolve))
+                                .catch(reject);
+                        });
+
+                        bus.request('getLocalStorageData', null, timeout)
+                            .then(utils.onExportUsers(origin, resolve))
+                            .catch(reject);
+
                     });
-
-                    setTimeout(() => {
-                        reject(new Error('Timeout limit error!'));
-                    }, timeout);
                 });
             },
 
@@ -754,7 +932,7 @@
                 iframe.src = `${origin}/export.html`;
 
                 const result = utils.loadOrTimeout(iframe, timeout)
-                    .then(() => utils.importUsersByWindow(iframe.contentWindow, origin, timeout))
+                    .then(() => utils.importUsersByWindow(iframe, origin, timeout))
                     .then(onSuccess)
                     .catch(onError);
 
@@ -780,6 +958,12 @@
                 const right = `top=${Math.floor(screen.height - 100 / 2)}`;
                 let closed = false;
 
+                const win = window.open(
+                    `${origin}/export.html`,
+                    'export',
+                    `${width},${height},${left},${top},${right},no,no,no,no,no,no`
+                );
+
                 const close = d => {
                     if (!closed) {
                         win.close();
@@ -787,12 +971,6 @@
                     }
                     return d;
                 };
-
-                const win = window.open(
-                    `${origin}/export.html`,
-                    'export',
-                    `${width},${height},${left},${top},${right},no,no,no,no,no,no`
-                );
 
                 const onError = (e) => {
                     close();
@@ -813,19 +991,20 @@
             onExportUsers(origin, resolve) {
                 return (response) => {
                     if (!response) {
-                        return [];
+                        resolve([]);
                     }
 
-                    resolve(response.accounts && response.accounts.map(utils.remapOldClientAccounts) || []);
+                    resolve(response);
                 };
             },
 
             /**
              * @name app.utils#openDex
+             * @param {string} dex
              * @param {string} asset1
              * @param {string} [asset2]
              */
-            openDex(asset1, asset2) {
+            openDex(asset1, asset2, dex = 'dex') {
                 /**
                  * @type {$state}
                  */
@@ -835,7 +1014,7 @@
                         return utils.openDex(asset1);
                     }
                     setTimeout(() => {
-                        $state.go('main.dex', { assetId1: asset1, assetId2: asset2 });
+                        $state.go(`main.${dex}`, { assetId1: asset1, assetId2: asset2 });
                     }, 50);
                     return null;
                 }
@@ -845,7 +1024,7 @@
                     asset2 = WavesApp.defaultAssets.WAVES;
                 }
                 setTimeout(() => {
-                    $state.go('main.dex', { assetId1: asset1, assetId2: asset2 });
+                    $state.go(`main.${dex}`, { assetId1: asset1, assetId2: asset2 });
                 }, 50);
             },
 
@@ -858,8 +1037,10 @@
              * @return {Array.<Object>}
              */
             getValidCandleOptions(from, to, interval = 60) {
-                to = Math.floor(to / 1000) * 1000;
-                from = Math.floor(from / 1000) * 1000;
+                const minute = 1000 * 60;
+
+                from = Math.floor(from / minute) * minute;
+                to = Math.ceil(to / minute) * minute;
 
                 const config = INTERVAL_MAP[interval];
                 const options = {
@@ -960,6 +1141,56 @@
                 }
 
                 return `${stringNum}${postfix}`;
+            },
+
+            /**
+             * @name app.utils#getDataFromOracles
+             * @param {string} assetId
+             * @return {object}
+             */
+            getDataFromOracles(assetId) {
+                /**
+                 * @type {User}
+                 */
+                const user = $injector.get('user');
+
+                const dataOracle = ds.dataManager.getOraclesAssetData(assetId);
+
+                const isGateway = path(['status'], dataOracle) === 3;
+
+                const isTokenomica = path(['status'], dataOracle) === STATUS_LIST.VERIFIED &&
+                    path(['provider'], dataOracle) === 'Tokenomica';
+
+                const isVerified = path(['status'], dataOracle) === STATUS_LIST.VERIFIED &&
+                    path(['provider'], dataOracle) !== 'Tokenomica';
+
+                const isSuspicious = user.scam[assetId];
+
+                const isGatewaySoon = path(['status'], dataOracle) === 4;
+
+                const hasLabel = isVerified || isGateway || isSuspicious || isTokenomica || isGatewaySoon;
+
+                const ticker = path(['ticker'], dataOracle);
+                const link = path(['link'], dataOracle);
+                const email = path(['email'], dataOracle);
+                const logo = path(['logo'], dataOracle);
+                const provider = isVerified || isTokenomica && path(['provider'], dataOracle) || null;
+                const description = path(['description', 'en'], dataOracle);
+
+                return {
+                    isVerified,
+                    isGateway,
+                    isTokenomica,
+                    isSuspicious,
+                    isGatewaySoon,
+                    hasLabel,
+                    ticker,
+                    link,
+                    email,
+                    provider,
+                    description,
+                    logo
+                };
             },
 
             /**
@@ -1366,14 +1597,8 @@
              * @return Money
              */
             getExchangeFee(tx) {
-                /**
-                 * @type {User}
-                 */
-                const user = $injector.get('user');
-                return [tx.order1, tx.order2]
-                    .filter(order => user.publicKey === order.senderPublicKey)
-                    .map(order => order.matcherFee)
-                    .reduce((acc, item) => acc.add(item), tx.fee.cloneWithTokens(0));
+                const isBuy = tx.exchangeType === WavesApp.TRANSACTION_TYPES.EXTENDED.EXCHANGE_BUY;
+                return isBuy ? tx.buyMatcherFee : tx.sellMatcherFee;
             },
 
             /**
@@ -1392,7 +1617,7 @@
                     case SIGN_TYPE.MASS_TRANSFER:
                         return utils.isMyPublicKey(tx.senderPublicKey) ? TYPES.MASS_SEND : TYPES.MASS_RECEIVE;
                     case SIGN_TYPE.EXCHANGE:
-                        return tx.exchangeType === 'buy' ? TYPES.EXCHANGE_BUY : TYPES.EXCHANGE_SELL;
+                        return utils.typOfExchange(tx);
                     case SIGN_TYPE.LEASE:
                         return utils.isMyPublicKey(tx.senderPublicKey) ? TYPES.LEASE_OUT : TYPES.LEASE_IN;
                     case SIGN_TYPE.CANCEL_LEASING:
@@ -1406,16 +1631,28 @@
                     case SIGN_TYPE.BURN:
                         return TYPES.BURN;
                     case SIGN_TYPE.DATA:
-                        return TYPES.DATA;
+                        return _getDataType(tx);
                     case SIGN_TYPE.SET_SCRIPT:
                         return (tx.script || '').replace('base64:', '') ? TYPES.SET_SCRIPT : TYPES.SCRIPT_CANCEL;
                     case SIGN_TYPE.SPONSORSHIP:
                         return tx.minSponsoredAssetFee.getCoins().gt(0) ? SPONSOR_START : SPONSOR_STOP;
                     case SIGN_TYPE.SET_ASSET_SCRIPT:
                         return TYPES.SET_ASSET_SCRIPT;
+                    case SIGN_TYPE.SCRIPT_INVOCATION:
+                        return TYPES.SCRIPT_INVOCATION;
                     default:
                         return TYPES.UNKNOWN;
                 }
+            },
+
+            /**
+             * @name app.utils#typOfExchange
+             * @param tx
+             * @return string
+             */
+            typOfExchange({ exchangeType }) {
+                const TYPES = WavesApp.TRANSACTION_TYPES.EXTENDED;
+                return exchangeType === 'buy' ? TYPES.EXCHANGE_BUY : TYPES.EXCHANGE_SELL;
             },
 
             /**
@@ -1614,6 +1851,18 @@
             } else {
                 return meIsSender ? TYPES.SEND : TYPES.RECEIVE;
             }
+        }
+
+        /**
+         * @param {api.ITransferTransaction<string>} tx
+         * @private
+         */
+        function _getDataType(tx) {
+            const { DATA, DATA_VOTE } = WavesApp.TRANSACTION_TYPES.EXTENDED;
+            const data = Array.isArray(tx.data) ? tx.data : tx.data.data;
+            const keyRating = data.find(propEq('key', 'tokenRating'));
+
+            return keyRating && keyRating.value === 'tokenRating' ? DATA_VOTE : DATA;
         }
 
         /**

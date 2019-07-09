@@ -4,22 +4,24 @@
 
     const { config } = require('data-service');
     const { flatten, pipe, prop, map } = require('ramda');
-    const POLL_DELAY = 1400;
+    const POLL_DELAY = 800;
 
     /**
      * @param {app.utils} utils
      * @param {TimeLine} timeLine
      * @param {SymbolInfoService} symbolInfoService
      * @param {Waves} waves
+     * @param {Matcher} matcher
      * @return {CandlesService}
      */
-    const factory = function (utils, timeLine, symbolInfoService, waves) {
+    const factory = function (utils, timeLine, symbolInfoService, waves, matcher) {
 
         class CandlesService {
 
             constructor() {
                 this._lastTime = 0;
                 this._subscriber = null;
+                this.onLoadError = angular.noop;
             }
 
             static _getAndHandleCandles(symbolInfo, from, to, resolution, handleCandles, handleError = angular.noop) {
@@ -47,21 +49,25 @@
                 const amountId = symbolInfo._wavesData.amountAsset.id;
                 const priceId = symbolInfo._wavesData.priceAsset.id;
                 const { options, config: candleConfig } = utils.getValidCandleOptions(from, to, interval);
-                const promises = options.map(option => config.getDataService().getCandles(amountId, priceId, option));
+                const promises = options.map(option => config.getDataService().getCandles(amountId, priceId, {
+                    matcher: matcher.currentMatcherAddress,
+                    ...option
+                }));
 
-                const convertBigNumber = (num) => num.isNaN() ? null : num.toNumber();
+                const convertBigNumber = num => num.isNaN() ? null : num.toNumber();
 
                 const candles = Promise.all(promises)
                     .then(pipe(map(prop('data')), flatten))
-                    .then(list => list.map(candle => ({
-                        txsCount: candle.txsCount || 0,
-                        high: convertBigNumber(candle.high),
-                        low: convertBigNumber(candle.low),
-                        close: convertBigNumber(candle.close),
-                        open: convertBigNumber(candle.open),
-                        volume: convertBigNumber(candle.volume),
-                        time: new Date(candle.time).getTime()
-                    })));
+                    .then(list => list
+                        .map(candle => ({
+                            txsCount: candle.txsCount || 0,
+                            high: convertBigNumber(candle.high),
+                            low: convertBigNumber(candle.low),
+                            close: convertBigNumber(candle.close),
+                            open: convertBigNumber(candle.open),
+                            volume: convertBigNumber(candle.volume),
+                            time: new Date(candle.time).getTime()
+                        })));
 
                 const lastTrade = ds.api.pairs.get(amountId, priceId)
                     .then(pair => waves.matcher.getLastPrice(pair)
@@ -70,19 +76,13 @@
                 return Promise.all([candles, lastTrade])
                     .then(([candles, lastTrade]) => {
                         if (candles.length === 1 && lastTrade) {
-                            const lastCandle = candles[candles.length - 1];
-
-                            if (lastCandle.open != null) {
-                                lastCandle.close = Number(lastTrade.price.toTokens());
-                            }
+                            candles[candles.length - 1].close = Number(lastTrade.price.toTokens());
                         } else {
                             candles = candleConfig.converter(candles);
                         }
-                        return candles;
-                    })
-                    .catch(() => {
-                        return utils.wait(5000).then(() => []);
-                    });
+                        return candles
+                            .filter(candle => candle.open != null);
+                    }).catch(() => utils.wait(5000).then(() => []));
             }
 
             static convertToMilliseconds(seconds) {
@@ -105,7 +105,10 @@
 
                 symbolInfoService.get(symbolName)
                     .then(resolve)
-                    .catch(reject); // TODO
+                    .catch(() => {
+                        this.onLoadError();
+                        reject();
+                    }); // TODO
             }
 
             getBars(symbolInfo, resolution, from, to, onHistoryCallback, onErrorCallback) {
@@ -185,7 +188,7 @@
         return new CandlesService();
     };
 
-    factory.$inject = ['utils', 'timeLine', 'symbolInfoService', 'waves'];
+    factory.$inject = ['utils', 'timeLine', 'symbolInfoService', 'waves', 'matcher'];
 
     angular.module('app.dex').factory('candlesService', factory);
 })();

@@ -5,9 +5,10 @@
      * @param {Assets} assets
      * @param {app.utils} utils
      * @param {app.utils.decorators} decorators
+     * @param {Transactions} transactions
      * @return {WavesUtils}
      */
-    const factory = function (assets, utils, decorators) {
+    const factory = function (assets, utils, decorators, transactions) {
 
         const ds = require('data-service');
         const entities = require('@waves/data-entities');
@@ -164,26 +165,24 @@
                 };
 
                 return ds.api.pairs.get(from, to)
-                    .then((pair) => {
-                        return ds.api.pairs.info(pair)
-                            .catch(() => null)
-                            .then(([data]) => {
+                    .then(pair => ds.api.pairs.info(pair)
+                        .then(([data]) => {
 
-                                if (!data || data.status === 'error') {
-                                    return 0;
-                                }
+                            if (!data || data.status === 'error') {
+                                return 0;
+                            }
 
-                                const open = data.firstPrice || new entities.Money(0, pair.priceAsset);
-                                const close = data.lastPrice || new entities.Money(0, pair.priceAsset);
-                                const change24 = getChange(open.getTokens(), close.getTokens()).toNumber();
+                            const open = data.firstPrice || new entities.Money(0, pair.priceAsset);
+                            const close = data.lastPrice || new entities.Money(0, pair.priceAsset);
+                            const change24 = getChange(open.getTokens(), close.getTokens()).toNumber();
 
-                                if (pair.amountAsset.id === from) {
-                                    return change24;
-                                } else {
-                                    return -change24;
-                                }
-                            });
-                    });
+                            if (pair.amountAsset.id === from) {
+                                return change24;
+                            } else {
+                                return -change24;
+                            }
+                        }))
+                    .catch(() => 0);
             }
 
             /**
@@ -210,7 +209,7 @@
 
                 return ds.api.pairs.get(fromId, toId)
                     .then((pair) => {
-                        return ds.api.transactions.getExchangeTxList({
+                        return transactions.getExchangeTxList({
                             limit: 5,
                             amountAsset: pair.amountAsset,
                             priceAsset: pair.priceAsset
@@ -323,7 +322,7 @@
         return new WavesUtils();
     };
 
-    factory.$inject = ['assets', 'utils', 'decorators'];
+    factory.$inject = ['assets', 'utils', 'decorators', 'transactions'];
 
     angular.module('app')
         .factory('wavesUtils', factory);

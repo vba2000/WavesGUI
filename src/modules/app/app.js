@@ -99,15 +99,19 @@
         'app.utils',
         'app.ui',
         // 'app.welcome',
+        // 'app.signIn',
         // 'app.create',
         // 'app.restore',
+        // 'app.saveSeed',
         // 'app.desktop',
         // 'app.ledger',
         // 'app.keeper',
         // 'app.import',
         // 'app.wallet',
-        'app.dex'
-        // 'app.tokens'
+        'app.dex',
+        // 'app.tokens',
+        'app.unavailable'
+        // 'app.stand'
     ]);
 })();
 
@@ -132,7 +136,7 @@
 /**
  * @typedef {object} IWavesApp
  * @property {string} name
- * @property {string} oracle
+ * @property {object} oracles
  * @property {string} version
  * @property {string} type
  * @property {string} origin

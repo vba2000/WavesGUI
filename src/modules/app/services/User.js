@@ -2,6 +2,9 @@
 (function () {
     'use strict';
 
+    const { equals } = require('ramda');
+    const { utils: generatorUtils } = require('@waves/signature-generator');
+
     /* global
         Mousetrap
      */
@@ -11,7 +14,9 @@
         'extraFee',
         'networkError',
         'changeScript',
-        'scam'
+        'setScamSignal',
+        'scam',
+        'onLogout'
     ];
 
     /**
@@ -24,7 +29,7 @@
      * @param {TimeLine} timeLine
      * @param {$injector} $injector
      * @param {app.utils} utils
-     * @param {Themes} themes
+     * @param {*} themes
      * @return {User}
      */
     const factory = function (storage,
@@ -41,7 +46,11 @@
         const tsUtils = require('ts-utils');
         const ds = require('data-service');
         const { Money } = require('@waves/data-entities');
+        const analytics = require('@waves/event-sender');
 
+        /**
+         * @class User
+         */
         class User {
 
             /**
@@ -51,6 +60,10 @@
                 return this._settings.change;
             }
 
+            /**
+             * @type {Signal<{}>}
+             */
+            onLogout = new tsUtils.Signal();
             /**
              * @type {boolean}
              */
@@ -84,10 +97,6 @@
              */
             settings = Object.create(null);
             /**
-             * @type {boolean}
-             */
-            noSaveToStorage = false;
-            /**
              * @type {number}
              */
             lastLogin = Date.now();
@@ -103,6 +112,10 @@
              * @type {Signal<void>}
              */
             changeScript = new tsUtils.Signal();
+            /**
+             * @type {Signal<void>}
+             */
+            setScamSignal = new tsUtils.Signal();
             /**
              * @type {Record<string, boolean>}
              */
@@ -157,6 +170,11 @@
              * @private
              */
             _scriptInfoPoll = null;
+            /**
+             * @type {boolean}
+             * @private
+             */
+            _noSaveToStorage = false;
 
             constructor() {
                 storage.setUser(this);
@@ -173,7 +191,16 @@
                     setTimeout(() => {
                         this._scriptInfoPoll = new Poll(() => this.updateScriptAccountData(), () => null, 10000);
                     }, 30000);
+
                 });
+
+            }
+
+            setScam(hash) {
+                if (!equals(hash, this.scam)) {
+                    this.scam = hash;
+                    this.setScamSignal.dispatch();
+                }
             }
 
             /**
@@ -333,7 +360,7 @@
             login(data) {
                 this.networkError = false;
                 return this._addUserData(data)
-                    .then(() => analytics.push('User', `Login.${WavesApp.type}.${data.userType}`));
+                    .then(() => analytics.send({ name: 'Sign In Success' }));
             }
 
             /**
@@ -349,8 +376,7 @@
              * @return Promise
              */
             create(data, hasBackup, restore) {
-
-                this.noSaveToStorage = !data.saveToStorage;
+                this._noSaveToStorage = !data.saveToStorage;
 
                 data.userType = data.userType || 'seed';
 
@@ -368,19 +394,48 @@
                         hasBackup,
                         lng: i18next.language,
                         theme: themes.getDefaultTheme(),
-                        candle: 'blue'
+                        candle: 'blue',
+                        dontShowSpam: true
                     }
-                }).then(() => analytics.push(
-                    'User',
-                    `${restore ? 'Restore' : 'Create'}.${WavesApp.type}.${data.userType}`,
-                    document.referrer));
+                }).then(() => {
+                    if (restore) {
+                        analytics.send({
+                            name: 'Import Backup Success',
+                            params: { userType: data.userType }
+                        });
+                    } else {
+                        analytics.send({
+                            name: 'Create Success',
+                            params: {
+                                hasBackup,
+                                userType: data.userType
+                            }
+                        });
+                    }
+                });
             }
 
-            logout() {
-                if (WavesApp.isDesktop()) {
-                    transfer('reload');
+            /**
+             * @param {string} [stateName]
+             */
+            logout(stateName) {
+                this.onLogout.dispatch({});
+
+                const applyLogout = () => { // TODO DEXW-1740
+                    if (WavesApp.isDesktop()) {
+                        transfer('reload');
+                    } else {
+                        window.location.reload();
+                    }
+                };
+
+                if (stateName) { // TODO DEXW-1740
+                    state.signals.changeRouterStateSuccess.once(
+                        () => requestAnimationFrame(applyLogout)
+                    );
+                    $state.go(stateName, { logout: true });
                 } else {
-                    window.location.reload();
+                    applyLogout();
                 }
             }
 
@@ -420,7 +475,7 @@
              */
             getUserList() {
                 return storage.onReady().then(() => storage.load('userList'))
-                    .then((list) => {
+                    .then(list => {
                         list = list || [];
 
                         list.sort((a, b) => {
@@ -430,6 +485,14 @@
 
                         return list;
                     });
+            }
+
+            /**
+             * @return {Promise}
+             */
+            getFilteredUserList() {
+                return this.getUserList()
+                    .then(list => list.filter(user => generatorUtils.crypto.isValidAddress(user.address)));
             }
 
             removeUserByAddress(removeAddress) {
@@ -449,7 +512,7 @@
                 if (currentTheme !== newTheme) {
                     this.setSetting('theme', newTheme);
                 }
-                analytics.push('Settings', 'Settings.ChangeTheme', newTheme);
+                // analytics.push('Settings', 'Settings.ChangeTheme', newTheme);
             }
 
             changeCandle(name) {
@@ -540,6 +603,8 @@
                                 this[propertyName] = item[propertyName];
                             }
                         });
+
+                        analytics.addDefaultParams({ userType: this.userType });
                         this.lastLogin = Date.now();
 
                         if (this._settings) {
@@ -563,7 +628,7 @@
                             ds.config.set(key, this._settings.get(`network.${key}`));
                         });
 
-                        ds.config.set('oracleAddress', this.getSetting('assetsOracle'));
+                        ds.config.set('oracleWaves', this.getSetting('oracleWaves'));
 
                         ds.app.login(data.address, data.api);
 
@@ -652,7 +717,7 @@
              * @private
              */
             _save() {
-                if (this.noSaveToStorage || !this.address) {
+                if (this._noSaveToStorage || !this.address) {
                     return Promise.resolve();
                 }
 
