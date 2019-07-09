@@ -30,15 +30,14 @@
     };
 
     function connect(user) {
-        return api.request('login', user || defaultUser, 10000)
-            .then((...args) => {
-                /* eslint-disable*/
-                console.log(...args);
-            })
+        state.isLogined = false;
+        return api.request('login', user || defaultUser, 3000)
             .catch((error) => {
                 /* eslint-disable*/
                 console.error(error);
-                return new Promise((res) => setTimeout(() => res(connect(user)), 20000));
+                if (!state.isLogined) {
+                    return new Promise((res) => setTimeout(() => res(connect(user)), 2000));
+                }
             });
     }
 
