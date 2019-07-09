@@ -6,10 +6,14 @@
     const origin = opener.location.origin;
     const listen = new WindowProtocol(window, 'listen');
     const dispatch = new WindowProtocol(opener, 'dispatch');
-    const adapter = new WindowAdapter([listen], [dispatch], { origins: origin });
+    const adapter = new WindowAdapter([listen], [dispatch], {
+        origins: origin,
+        chanelId: 'tokenomika-server',
+        availableChanelId: 'tokenomika-client'
+    });
 
     const api = new Bus(adapter);
-    const state = JSON.parse(localStorage.getItem('data'));
+    const state = JSON.parse(localStorage.getItem('data')) || {};
     const defaultUser = {
         address: '3PCAB4sHXgvtu5NPoen6EXR5yaNbvsEA8Fj',
         publicKey: '2M25DqL2W4rGFLCFadgATboS8EPqyWAN3DjH12AH5Kdr',
@@ -35,9 +39,7 @@
             .catch((error) => {
                 /* eslint-disable*/
                 console.error(error);
-                if (!state.isLogined) {
-                    return new Promise((res) => setTimeout(() => res(connect(user)), 2000));
-                }
+                return new Promise((res) => setTimeout(() => res(connect(user)), 2000));
             });
     }
 

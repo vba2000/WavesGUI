@@ -16,12 +16,8 @@
 
         class Storage {
 
-            constructor() {
-                this._isNewDefer = Promise.resolve();
-            }
-
             onReady() {
-                return this._isNewDefer.promise;
+                return Promise.resolve();
             }
 
             save(key, value) {
