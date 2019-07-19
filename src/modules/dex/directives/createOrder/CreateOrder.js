@@ -328,6 +328,7 @@
                 return !this.maxAmount.getTokens().isZero();
             }
 
+
             expand(type) {
                 this.type = type;
                 if (!this.price || this.price.getTokens().eq('0')) {

@@ -437,7 +437,9 @@
                 getController: config.getController,
                 analyticsIframe: config.analyticsIframe,
                 isWeb: config.isWeb,
-                isDesktop: config.isDesktop,
+                isDesktop: function () {
+                    return false;
+                },
                 isProduction: config._isProduction,
                 parseJSON: null,
                 stateTree: null,

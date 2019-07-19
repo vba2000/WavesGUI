@@ -467,7 +467,7 @@
             }
 
             getLastState() {
-                return this._history.length > 1 ? this._history[this._history.length - 2] : 'dex';
+                return this._history.length > 1 ? this._history[this._history.length - 2] : 'welcome';
             }
 
             /**
@@ -603,7 +603,7 @@
              */
             _addUserData(data) {
                 return data.api.getPublicKey().then(publicKey => (data.publicKey = publicKey))
-                    .then(() => this._loadUser(data.address))
+                    .then(() => this._loadUserByAddress(data.address))
                     .then((item) => {
                         this._fieldsForSave.forEach((propertyName) => {
                             if (data[propertyName] != null) {
@@ -730,20 +730,27 @@
                     return Promise.resolve();
                 }
 
-                const props = this._fieldsForSave.reduce((result, propertyName) => {
-                    const property = this[propertyName];
-                    if (property != null) {
-                        result[propertyName] = property;
-                    }
-                    return result;
-                }, Object.create(null));
-
-                return storage.save('user', props);
+                return storage.load('userList')
+                    .then((list) => {
+                        list = list || [];
+                        list = list.filter(tsUtils.notContains({ address: this.address }));
+                        const props = this._fieldsForSave.reduce((result, propertyName) => {
+                            const property = this[propertyName];
+                            if (property != null) {
+                                result[propertyName] = property;
+                            }
+                            return result;
+                        }, Object.create(null));
+                        list.push(props);
+                        return storage.save('userList', list);
+                    });
             }
 
-            _loadUser() {
-                return storage.load('user')
-                    .then(settings => settings || Object.create(null));
+            _loadUserByAddress(address) {
+                return storage.load('userList')
+                    .then((list) => {
+                        return tsUtils.find(list || [], { address }) || Object.create(null);
+                    });
             }
 
         }

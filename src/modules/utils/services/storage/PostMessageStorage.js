@@ -75,8 +75,8 @@
 
                 this.readyPromise = new Promise((resolve) => {
                     api.registerRequestHandler('login', (user) => {
-                        resolve();
                         this._data = { user };
+                        resolve();
                         this.user.loginByData(user)
                             .then(() => api.dispatchEvent('loginOk', { status: 'ok' }))
                             .catch(error => api.dispatchEvent('loginError', { status: 'error', error }));
@@ -89,7 +89,7 @@
 
                 api.registerRequestHandler('demo', (settings) => {
                     return this.user.showDemo(settings);
-                });
+                })
 
                 api.on('changePair', (data) => {
                     this.user.setSetting('dex.assetIdPair', data);
@@ -142,7 +142,11 @@
         const origin = opener.location.origin;
         const listen = new WindowProtocol(window, 'listen');
         const dispatch = new WindowProtocol(opener, 'dispatch');
-        const adapter = new WindowAdapter([listen], [dispatch], { origins: origin });
+        const adapter = new WindowAdapter([listen], [dispatch], {
+            origins: origin,
+            chanelId: 'tokenomika-client',
+            availableChanelId: 'tokenomika-server'
+        });
 
         return new Bus(adapter);
     }

@@ -9,7 +9,7 @@
      * @param {app.utils} utils
      * @return {ModalRouter}
      */
-    const factory = function (user, modalManager, waves, Router) {
+    const factory = function (user, modalManager, waves, Router, utils) {
 
         class ModalRouter {
 

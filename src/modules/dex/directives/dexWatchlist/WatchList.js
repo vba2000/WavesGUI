@@ -28,7 +28,7 @@
      * @returns {WatchList}
      */
     const controller = function (Base, $scope, utils, waves, stService, PromiseControl, createPoll, $element,
-                                 modalManager) {
+                                 modalManager, configService) {
 
         const {
             equals, uniq, not,
@@ -218,10 +218,6 @@
                 this._initializeActiveTab();
 
                 this.observe('_assetIdPair', this._onChangeChosenPair);
-                this.observe('_assetsIds', () => {
-                    this._getPairData();
-                    WatchList._renderSmartTable();
-                });
                 this.observe('activeTab', this._onChangeActiveTab);
 
                 stService.draw.once(WatchList._onRenderTable);

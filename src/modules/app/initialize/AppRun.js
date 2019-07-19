@@ -303,7 +303,13 @@
 
                 let waiting = false;
 
-                analytics.init();
+                analytics.init(WavesApp.analyticsIframe, {
+                    platform: WavesApp.type,
+                    networkByte: ds.config.get('code'),
+                    userType: 'unknown'
+                });
+
+                analytics.activate();
 
                 const stop = $rootScope.$on('$stateChangeStart', (event, toState, params, fromState) => {
 
