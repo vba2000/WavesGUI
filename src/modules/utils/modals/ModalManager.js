@@ -72,6 +72,19 @@
                 });
             }
 
+            showTryDesktopModal() {
+                analytics.send({ name: 'Onboarding Platform Popup Show', target: 'ui' });
+                return this._getModal({
+                    id: 'try-desktop',
+                    title: '',
+                    contentUrl: 'modules/utils/modals/tryDesktop/tryDesktop.html',
+                    controller: 'TryDesktopCtrl',
+                    clickOutsideToClose: false,
+                    escapeToClose: false,
+                    mod: 'try-desktop-modal'
+                });
+            }
+
             showPairingWithMobile() {
                 return this._getModal({
                     id: 'pairing-with-mobile',
@@ -228,7 +241,7 @@
 
                 return api.getSeed()
                     .then((phrase) => {
-                        const seed = new ds.Seed(phrase);
+                        const seed = new ds.Seed(phrase, window.WavesApp.network.code);
                         return this._getModal({
                             id: 'seed-backup',
                             title: 'modal.backup.title.{{$ctrl.titleLiteral}}',

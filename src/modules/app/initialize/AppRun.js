@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-/* global openInBrowser, BigNumber */
+/* global openInBrowser */
 (function () {
     'use strict';
 
@@ -303,13 +303,7 @@
 
                 let waiting = false;
 
-                analytics.init(WavesApp.analyticsIframe, {
-                    platform: WavesApp.type,
-                    networkByte: ds.config.get('code'),
-                    userType: 'unknown'
-                });
-
-                analytics.activate();
+                analytics.init();
 
                 const stop = $rootScope.$on('$stateChangeStart', (event, toState, params, fromState) => {
 

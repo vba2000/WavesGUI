@@ -7,6 +7,8 @@ import { createCleanTask } from './scripts/cleanTask';
 import { createConcatTask } from './scripts/concatTask';
 import { createCopyTask } from './scripts/copyTask';
 import { createDataServicesTask } from './scripts/dataServicesTask';
+import { createElectronDebugTask } from './scripts/electronDebugTask';
+import { createElectronPackageTask } from './scripts/electronPackageTask';
 import { createEslintTask } from './scripts/eslintTask';
 import { createHtmlTask } from './scripts/htmlTask';
 import { createImageListTask } from './scripts/imageListTask';
@@ -67,7 +69,7 @@ function createBuildTask(args?: { platform: TPlatform; env: TBuild; config: stri
                     module: 'app.templates',
                     standalone: true,
                     transformUrl(url: string) {
-                        return url.startsWith('/') ? url.slice(1) : url;
+                        return (url.startsWith('/') || url.startsWith('\\')) ? url.slice(1) : url;
                     },
                     filename: getFileName('templates.js', env as TBuild)
                 }
@@ -137,6 +139,7 @@ function createBuildTask(args?: { platform: TPlatform; env: TBuild; config: stri
             themes,
             networkConfigFile: config
         }),
+        createElectronPackageTask(outputPath, platform as TPlatform, meta, pack)
     );
 }
 
@@ -152,9 +155,13 @@ task('clean', createCleanTask());
 
 task('data-services', createDataServicesTask());
 
+task('electron-debug', createElectronDebugTask());
+
 task('all', series(
     createCleanTask(),
     createDataServicesTask(),
     createBuildTask({ platform: 'web', env: 'production', config: './configs/mainnet.json' }),
     createBuildTask({ platform: 'web', env: 'production', config: './configs/testnet.json' }),
+    createBuildTask({ platform: 'desktop', env: 'production', config: './configs/mainnet.json' }),
+    createBuildTask({ platform: 'desktop', env: 'production', config: './configs/testnet.json' })
 ));
